@@ -1,0 +1,256 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
+
+/* ------------------------------------------------------------------
+   Snapdragon Latam 2026 · Sistema "Papel técnico"
+   Blanco editorial, tinta casi negra y un solo acento: rojo Snapdragon.
+   Contrastes (sobre #fff): ink 19.3:1 · ink-2 11:1 · mute 5.1:1 · red 5.0:1
+------------------------------------------------------------------- */
+@theme {
+	--font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+	--font-display: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+	--font-mono: 'Geist Mono Variable', ui-monospace, 'SFMono-Regular', monospace;
+
+	--color-paper: #ffffff;
+	--color-paper-2: #f6f6f4;
+	--color-paper-3: #ededea;
+	--color-ink: #0b0b0c;
+	--color-ink-2: #2e2e33;
+	--color-mute: #6b6b70;
+	--color-faint: #a6a6aa;
+	--color-line: rgb(11 11 12 / 0.09);
+	--color-line-2: rgb(11 11 12 / 0.16);
+
+	--color-red: #e01224;
+	--color-red-ink: #b8001a;
+	--color-red-soft: #fdeceb;
+	--color-gold: #c99a4a;
+
+	/* Escala heredada (compatibilidad) */
+	--color-brand-50: #fff1f2;
+	--color-brand-100: #ffe0e2;
+	--color-brand-300: #ff8a93;
+	--color-brand-400: #ff4d5a;
+	--color-brand-500: #ff1324;
+	--color-brand-600: #e01224;
+	--color-brand-700: #c0001a;
+
+	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+	--ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
+	--ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+
+	--animate-marquee: marquee 60s linear infinite;
+	--animate-pulse-dot: pulse-dot 2.4s var(--ease-out-quart) infinite;
+
+	@keyframes marquee {
+		from { transform: translate3d(0, 0, 0); }
+		to { transform: translate3d(-50%, 0, 0); }
+	}
+	@keyframes pulse-dot {
+		0% { box-shadow: 0 0 0 0 rgb(224 18 36 / 0.45); }
+		70%, 100% { box-shadow: 0 0 0 10px rgb(224 18 36 / 0); }
+	}
+}
+
+@layer base {
+	html {
+		-webkit-tap-highlight-color: transparent;
+		font-size: 100%;
+		background: var(--color-paper);
+		color: var(--color-ink);
+	}
+	html.lenis, html.lenis body { height: auto; }
+	.lenis.lenis-smooth { scroll-behavior: auto !important; }
+	.lenis.lenis-stopped { overflow: hidden; }
+
+	body {
+		font-family: var(--font-sans);
+		font-feature-settings: 'ss01', 'ss03', 'cv11';
+		overflow-x: clip;
+		background: var(--color-paper);
+		color: var(--color-ink);
+	}
+	h1, h2, h3, h4 {
+		font-family: var(--font-display);
+		letter-spacing: -0.035em;
+		text-wrap: balance;
+		font-weight: 500;
+	}
+	p { text-wrap: pretty; }
+	::selection { background: var(--color-ink); color: var(--color-paper); }
+
+	/* Tailwind v4 ya no pone cursor de mano en botones: todo lo clicable lo recupera */
+	a[href], button, [role='button'], [role='tab'], [role='radio'], [role='checkbox'],
+	select, summary, label:has(input[type='checkbox']), input[type='checkbox'], input[type='radio'] {
+		cursor: pointer;
+	}
+	button:disabled, [aria-disabled='true'] { cursor: not-allowed; }
+
+	:focus-visible {
+		outline: 2px solid var(--color-red);
+		outline-offset: 3px;
+		border-radius: 4px;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		*, *::before, *::after {
+			animation-duration: 0.01ms !important;
+			animation-iteration-count: 1 !important;
+			transition-duration: 0.01ms !important;
+		}
+	}
+}
+
+@layer components {
+	.container-x {
+		width: 100%;
+		max-width: 92rem;
+		margin-inline: auto;
+		padding-inline: clamp(1rem, 3.2vw, 2.75rem);
+	}
+
+	/* Etiqueta técnica: "(01) — RENDIMIENTO" */
+	.label {
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--color-mute);
+		font-weight: 450;
+	}
+	.label-ink { color: var(--color-ink); }
+
+	/* Acento tipográfico: Geist Mono (la misma de cifras y etiquetas) */
+	.accent {
+		font-family: var(--font-mono);
+		font-weight: 400;
+		font-style: normal;
+		letter-spacing: -0.07em;
+	}
+	/* La mono es más ancha que Geist: en titulares se reduce para equilibrar el bloque */
+	.display .accent { font-size: 0.8em; }
+
+	.display {
+		font-family: var(--font-display);
+		font-weight: 500;
+		letter-spacing: -0.055em;
+		line-height: 0.92;
+	}
+
+	.hairline { border-color: var(--color-line); }
+
+	/* Botones */
+	.btn {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.75rem;
+		height: 3rem;
+		padding-inline: 1.35rem;
+		border-radius: 999px;
+		font-size: 0.9rem;
+		font-weight: 500;
+		letter-spacing: -0.01em;
+		overflow: hidden;
+		isolation: isolate;
+		transition: color 0.5s var(--ease-out-expo), background-color 0.5s var(--ease-out-expo), border-color 0.5s var(--ease-out-expo);
+	}
+	.btn-primary { background: var(--color-ink); color: var(--color-paper); }
+	.btn-primary::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		z-index: -1;
+		background: var(--color-red);
+		transform: translateY(101%);
+		border-radius: 999px 999px 0 0;
+		transition: transform 0.6s var(--ease-out-expo), border-radius 0.6s var(--ease-out-expo);
+	}
+	.btn-primary:hover::before { transform: translateY(0); border-radius: 0; }
+	.btn-ghost { border: 1px solid var(--color-line-2); color: var(--color-ink); background: transparent; }
+	.btn-ghost:hover { border-color: var(--color-ink); }
+	.btn .btn-arrow {
+		display: grid;
+		place-items: center;
+		width: 1.6rem;
+		height: 1.6rem;
+		margin-right: -0.6rem;
+		border-radius: 999px;
+		background: currentColor;
+		transition: transform 0.6s var(--ease-out-expo);
+	}
+	.btn .btn-arrow svg { color: var(--color-ink); }
+	.btn-primary .btn-arrow { background: var(--color-paper); }
+	.btn-ghost .btn-arrow { background: var(--color-ink); }
+	.btn-ghost .btn-arrow svg { color: var(--color-paper); }
+	.btn:hover .btn-arrow { transform: rotate(-45deg); }
+
+	/* Enlace con subrayado animado */
+	.link {
+		background-image: linear-gradient(currentColor, currentColor);
+		background-size: 0% 1px;
+		background-position: 100% 100%;
+		background-repeat: no-repeat;
+		transition: background-size 0.6s var(--ease-out-expo);
+	}
+	.link:hover { background-size: 100% 1px; background-position: 0 100%; }
+
+	/* Placa de producto: gris papel con viñeta suave */
+	.plate {
+		background:
+			radial-gradient(120% 90% at 50% 0%, #ffffff 0%, transparent 60%),
+			var(--color-paper-2);
+	}
+
+	/* Retícula técnica de fondo */
+	.grid-paper {
+		background-image:
+			linear-gradient(var(--color-line) 1px, transparent 1px),
+			linear-gradient(90deg, var(--color-line) 1px, transparent 1px);
+		background-size: 48px 48px;
+		background-position: -1px -1px;
+	}
+
+	.no-scrollbar { scrollbar-width: none; }
+	.no-scrollbar::-webkit-scrollbar { display: none; }
+
+	/* Revelado de líneas de texto (action `splitReveal`) */
+	.line-mask { display: block; overflow: hidden; padding: 0.14em 0 0.08em; margin: -0.14em 0 -0.08em; }
+	.line-mask > span {
+		display: block;
+		transform: translate3d(0, 105%, 0);
+		transition: transform 1.1s var(--ease-out-expo);
+		transition-delay: calc(var(--i, 0) * 70ms + var(--reveal-delay, 0ms));
+	}
+	.is-visible .line-mask > span, .line-mask.is-visible > span { transform: none; }
+}
+
+/* Revelado genérico (action `reveal`) */
+[data-reveal] {
+	opacity: 0;
+	transform: translate3d(0, 24px, 0);
+	transition:
+		opacity 1s var(--ease-out-expo),
+		transform 1.2s var(--ease-out-expo);
+	transition-delay: var(--reveal-delay, 0ms);
+}
+[data-reveal].is-visible { opacity: 1; transform: none; }
+
+/* Revelado de imagen con cortina (el clip va en la imagen: un clip-path en el
+   elemento observado impide que IntersectionObserver lo detecte) */
+[data-reveal-img] img { clip-path: inset(100% 0 0 0); transform: scale(1.15); transition: clip-path 1.4s var(--ease-out-expo), transform 1.8s var(--ease-out-expo); transition-delay: var(--reveal-delay, 0ms); }
+[data-reveal-img].is-visible img { clip-path: inset(0 0 0 0); transform: scale(1); }
+
+@media (prefers-reduced-motion: reduce) {
+	[data-reveal], [data-reveal-img] img, .line-mask > span {
+		opacity: 1 !important; transform: none !important; clip-path: none !important;
+	}
+}
+
+/* Transiciones entre páginas (View Transitions API) */
+::view-transition-old(root) { animation: 420ms var(--ease-in-out-quint) both vt-out; }
+::view-transition-new(root) { animation: 700ms var(--ease-out-expo) both vt-in; }
+::view-transition-old(site-header), ::view-transition-new(site-header) { animation: none; }
+@keyframes vt-out { to { opacity: 0; transform: translateY(-16px); } }
+@keyframes vt-in { from { opacity: 0; transform: translateY(24px); } }
