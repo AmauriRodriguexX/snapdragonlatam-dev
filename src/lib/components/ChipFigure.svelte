@@ -28,7 +28,9 @@
 </script>
 
 <script lang="ts">
-	let { s, title = 'Anatomía del Snapdragon X Elite' }: { s: ChipState; title?: string } = $props();
+	/** lite: sin filtros de desenfoque (móvil / pantallas táctiles): las sombras pasan a ser planas */
+	let { s, title = 'Anatomía del Snapdragon X Elite', lite = false }: { s: ChipState; title?: string; lite?: boolean } = $props();
+	const soft = $derived(lite ? undefined : 'url(#soft)');
 
 	const extraOf = (g: string) => (g === 'cpu' ? s.cpu : g === 'gpu' ? s.gpu : g === 'npu' ? s.npu : 0);
 
@@ -60,7 +62,7 @@
 
 	<g transform="translate(50 167.5) scale({s.z}) translate({-s.fx} {-s.fy})">
 	<!-- Halo bajo la base -->
-	<path d={G.board.top} transform="translate(0 26)" class="halo" filter="url(#softer)" />
+	<path d={G.board.top} transform="translate(0 26)" class="halo" class:lite filter={lite ? undefined : 'url(#softer)'} />
 
 	<!-- Tarjeta madre -->
 	<g class="board" style:transform={par(0)}>
@@ -76,11 +78,13 @@
 		{#each G.traces as t}
 			<path d={t} class="trace" />
 		{/each}
-		<g class="pulses" style:opacity={s.mem}>
-			{#each G.traces as t, i}
-				<path d={t} class="pulse" style:animation-delay="{(i % 6) * -0.18}s" />
-			{/each}
-		</g>
+		{#if s.mem > 0.02}
+			<g class="pulses" style:opacity={s.mem}>
+				{#each G.traces as t, i}
+					<path d={t} class="pulse" style:animation-delay="{(i % 6) * -0.18}s" />
+				{/each}
+			</g>
+		{/if}
 
 		<!-- SMD -->
 		{#each G.smd as b}
@@ -105,28 +109,28 @@
 	</g>
 
 	<!-- Sustrato -->
-	<path d={G.substrate.top} class="shadow" filter="url(#soft)" style:opacity={Math.min(0.22, s.ls / 90)} style:transform={par(2)} />
-	<g style:transform={lift(s.ls, 3)}>
+	<path d={G.substrate.top} class="shadow" filter={soft} style:opacity={Math.min(0.22, s.ls / 90)} style:transform={par(2)} />
+	<g class="lift" style:transform={lift(s.ls, 3)}>
 		<g class="solid sub"><path d={G.substrate.py} class="f-y" /><path d={G.substrate.px} class="f-x" /><path d={G.substrate.top} class="f-t" /></g>
 		<path d={G.balls} class="balls" />
 		<path d={G.pin1} class="pin1" />
 		{#each G.subCaps as b}
 			<g class="solid scap"><path d={b.py} class="f-y" /><path d={b.px} class="f-x" /><path d={b.top} class="f-t" /></g>
 		{/each}
-		<path d={G.die.top} class="shadow" filter="url(#soft)" style:opacity={Math.min(0.28, (s.ld - s.ls) / 80)} />
+		<path d={G.die.top} class="shadow" filter={soft} style:opacity={Math.min(0.28, (s.ld - s.ls) / 80)} />
 	</g>
 
 	<!-- Die -->
-	<g style:transform={lift(s.ld, 5)}>
+	<g class="lift" style:transform={lift(s.ld, 5)}>
 		<g class="solid die"><path d={G.die.py} class="f-y" /><path d={G.die.px} class="f-x" /><path d={G.die.top} class="f-t" /><path d={G.die.top} fill="url(#dieSheen)" /></g>
 		<path d={G.dieGrid} class="die-grid" />
 		{#each G.blocks as b}
-			<path d={b.slab.top} class="shadow dark" filter="url(#soft)" style:opacity={Math.min(0.5, (s.lb + extraOf(b.group) - s.ld) / 60)} />
+			<path d={b.slab.top} class="shadow dark" filter={soft} style:opacity={Math.min(0.5, (s.lb + extraOf(b.group) - s.ld) / 60)} />
 		{/each}
 	</g>
 
 	<!-- Bloques funcionales -->
-	<g style:transform={lift(s.lb, 7)}>
+	<g class="lift" style:transform={lift(s.lb, 7)}>
 		<!-- Plano fantasma: contorno del die a la altura de los bloques -->
 		<path d={G.die.top} class="ghost" style:opacity={Math.min(1, Math.max(0, (s.lb - s.ld - 8) / 30))} />
 		{#each ordered as b (b.id)}
@@ -143,7 +147,8 @@
 <style>
 	.chip { overflow: hidden; }
 	.chip :global(path) { stroke-linejoin: round; stroke-linecap: round; }
-	g { transition: none; will-change: transform; }
+	.lift { will-change: transform; }
+	.halo.lite { opacity: 0.045; }
 
 	.halo { fill: #000; opacity: 0.09; }
 	.ghost { fill: none; stroke: #0b0b0c; stroke-width: 0.5; stroke-dasharray: 2.5 2; }

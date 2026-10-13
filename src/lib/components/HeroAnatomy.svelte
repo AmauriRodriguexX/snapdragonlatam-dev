@@ -66,17 +66,29 @@
 		}
 	});
 
+	// Modo ligero en táctil / pantallas chicas: sin filtros de desenfoque
+	let lite = $state(false);
+	let wake = () => {};
+
 	onMount(() => {
 		const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+		lite = matchMedia('(pointer: coarse), (max-width: 900px)').matches;
 		let raf = 0;
 		let last = performance.now();
 		let visible = true;
 		const io = new IntersectionObserver(([e]) => {
 			visible = e.isIntersecting;
-			if (visible && !raf) { last = performance.now(); raf = requestAnimationFrame(tick); }
+			if (visible) wake();
 		});
 		io.observe(section);
+		wake = () => {
+			if (!raf && visible) {
+				last = performance.now();
+				raf = requestAnimationFrame(tick);
+			}
+		};
 
+		const KEYS_N = ['ls', 'ld', 'lb', 'cpu', 'gpu', 'npu', 'mem', 'z', 'fx', 'fy'] as const;
 		function tick(now: number) {
 			const dt = Math.min(0.05, (now - last) / 1000);
 			last = now;
@@ -84,15 +96,22 @@
 			pp += (p - pp) * k;
 			const t = sample(pp);
 			const n = { ...s };
-			for (const key of ['ls', 'ld', 'lb', 'cpu', 'gpu', 'npu', 'mem', 'z', 'fx', 'fy'] as const) n[key] = s[key] + (t[key] - s[key]) * k;
+			let moving = Math.abs(p - pp) > 0.0002;
+			for (const key of KEYS_N) {
+				const d = t[key] - s[key];
+				if (Math.abs(d) > 0.01) moving = true;
+				n[key] = s[key] + d * k;
+			}
 			const kp = reduced ? 0 : 1 - Math.exp(-dt * 4);
+			if (Math.abs(target.mx - s.mx) + Math.abs(target.my - s.my) > 0.002) moving = true;
 			n.mx = s.mx + (target.mx - s.mx) * kp;
 			n.my = s.my + (target.my - s.my) * kp;
 			n.coresLit = chapter === 2 ? Math.round(win(pp, 0.29, 0.41) * F.cores) : 0;
 			n.gpuLit = chapter === 3 ? Math.round(win(pp, 0.46, 0.55) * 6) : 0;
 			n.npuLit = chapter === 4 ? Math.round(win(pp, 0.6, 0.69) * 12) : 0;
 			s = n;
-			raf = visible ? requestAnimationFrame(tick) : 0;
+			// Si todo llegó a su objetivo, el bucle se duerme hasta el próximo scroll o puntero
+			raf = visible && moving ? requestAnimationFrame(tick) : 0;
 		}
 		raf = requestAnimationFrame(tick);
 		return () => { cancelAnimationFrame(raf); io.disconnect(); };
@@ -103,8 +122,9 @@
 		const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
 		target.mx = ((e.clientX - r.left) / r.width - 0.5) * 2;
 		target.my = ((e.clientY - r.top) / r.height - 0.5) * 2;
+		wake();
 	}
-	function onLeave() { target.mx = 0; target.my = 0; }
+	function onLeave() { target.mx = 0; target.my = 0; wake(); }
 
 	// Punto de reposo de cada capítulo: donde su animación ya terminó
 	const REST = [0, 0.25, 0.42, 0.56, 0.7, 0.84, 0.97];
@@ -198,12 +218,12 @@
 	const cls = (i: number) => (chapter === i ? 'is-visible' : chapter > i ? 'is-past' : '');
 </script>
 
-<section bind:this={section} class="relative" style="height: 760vh" use:scrollProgress={(v) => (p = v)} aria-label="Anatomía del procesador Snapdragon X Elite">
+<section bind:this={section} data-keep-nav class="relative" style="height: 760vh" use:scrollProgress={(v) => { p = v; wake(); }} aria-label="Anatomía del procesador Snapdragon X Elite">
 	<div class="sticky top-0 h-svh overflow-hidden">
 		<!-- Retícula técnica -->
 		<div class="grid-paper pointer-events-none absolute inset-0 opacity-70 [mask-image:radial-gradient(75%_70%_at_62%_52%,#000_10%,transparent_75%)]" aria-hidden="true"></div>
 
-		<div class="container-x relative grid h-full grid-rows-[minmax(0,1fr)_auto] gap-2 pt-20 pb-24 lg:grid-cols-12 lg:grid-rows-1 lg:gap-8 lg:pt-24 lg:pb-28">
+		<div class="container-x relative grid h-full grid-rows-[minmax(0,1fr)_auto] gap-2 pt-18 pb-6 sm:pb-24 lg:grid-cols-12 lg:grid-rows-1 lg:gap-8 lg:pt-24 lg:pb-28">
 			<!-- Figura -->
 			<div class="relative order-1 min-h-0 lg:order-2 lg:col-span-7 lg:col-start-6" role="presentation" onpointermove={onPointer} onpointerleave={onLeave}>
 				<div class="crop absolute inset-0" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
@@ -214,7 +234,7 @@
 				<div class="label absolute top-3 right-4 text-right lg:top-4 lg:right-5">{F.name} · {F.sku}<span class="mt-1 hidden text-[0.62rem] text-faint sm:block">Die según foto anotada · NPU aprox.</span></div>
 
 				<div class="absolute inset-x-2 top-10 bottom-14 lg:inset-x-6 lg:top-12 lg:bottom-20">
-					<ChipFigure {s} />
+					<ChipFigure {s} {lite} />
 				</div>
 
 				<button
@@ -243,6 +263,12 @@
 
 			<!-- Capítulos -->
 			<div class="relative order-2 grid min-h-[13.5rem] items-end lg:order-1 lg:col-span-5 lg:min-h-0 lg:items-center">
+				<!-- Progreso compacto (solo móvil: reemplaza al riel) -->
+				<div class="absolute -top-2 inset-x-0 flex gap-1 sm:hidden" aria-hidden="true">
+					{#each RAIL as _, i}
+						<span class="h-[2px] flex-1 rounded-full transition-colors duration-500 {chapter >= i ? (playing && chapter === i ? 'bg-red' : 'bg-ink') : 'bg-line-2'}"></span>
+					{/each}
+				</div>
 				<!-- 0 · Intro -->
 				<div class="chapter {cls(0)}">
 					<p class="label"><span class="text-red">●</span> Snapdragon® X Series — Latinoamérica</p>
@@ -311,7 +337,7 @@
 		</div>
 
 		<!-- Riel de capítulos -->
-		<nav class="absolute inset-x-0 bottom-0 border-t border-line bg-paper/80 backdrop-blur-md" aria-label="Capítulos de la anatomía">
+		<nav class="absolute inset-x-0 bottom-0 hidden border-t border-line bg-paper/90 sm:block" aria-label="Capítulos de la anatomía">
 			<div class="container-x flex items-stretch">
 				<div class="mr-3 flex items-center gap-1 border-r border-line pr-3 sm:mr-5 sm:pr-5">
 					<button type="button" onclick={() => step(-1)} disabled={chapter === 0} class="grid h-8 w-8 place-items-center rounded-full transition-colors hover:bg-paper-3 disabled:opacity-30" aria-label="Capa anterior">

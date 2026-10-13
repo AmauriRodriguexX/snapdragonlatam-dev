@@ -28,7 +28,13 @@
 		const d = y - lastY;
 		lastY = y;
 		scrolled = y > 8;
-		if (open || y < 120) {
+		// Dentro de una sección fija (anatomía, laptop 3D) el nav se queda visible:
+		// esas vistas le reservan su espacio arriba y ocultarlo deja un hueco.
+		const keep = [...document.querySelectorAll('[data-keep-nav]')].some((el) => {
+			const r = el.getBoundingClientRect();
+			return r.top <= 1 && r.bottom >= innerHeight - 1;
+		});
+		if (open || y < 120 || keep) {
 			hidden = false;
 			acc = 0;
 			return;

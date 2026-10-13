@@ -102,7 +102,7 @@
 	];
 </script>
 
-<section bind:this={section} class="relative border-t border-line" style="height: 520vh" use:scrollProgress={(v) => (p = v)} aria-label="ASUS Zenbook A14 en 3D">
+<section bind:this={section} data-keep-nav class="relative border-t border-line" style="height: 520vh" use:scrollProgress={(v) => (p = v)} aria-label="ASUS Zenbook A14 en 3D">
 	<div class="sticky top-0 h-svh overflow-hidden">
 		<div class="container-x relative grid h-full grid-rows-[minmax(0,1fr)_auto] gap-2 pt-20 pb-10 lg:grid-cols-12 lg:grid-rows-1 lg:gap-8 lg:pt-24 lg:pb-16">
 			<!-- Modelo -->

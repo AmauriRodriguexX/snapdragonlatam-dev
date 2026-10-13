@@ -28,7 +28,7 @@ function screenTexture(onReady: () => void) {
 	const g = c.getContext('2d')!;
 	const t = new THREE.CanvasTexture(c);
 	t.colorSpace = THREE.SRGBColorSpace;
-	t.anisotropy = 8;
+	t.anisotropy = 4;
 
 	const rr = (x: number, y: number, w: number, h: number, r: number) => {
 		g.beginPath();
@@ -225,8 +225,11 @@ function shadowTexture() {
 }
 
 export function createZenbook(canvas: HTMLCanvasElement, onInvalidate: () => void = () => {}) {
-	const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
-	renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+	// En móvil: densidad de píxeles limitada a 1.5 y sin MSAA en pantallas densas (casi no se nota y ahorra GPU)
+	const mobile = matchMedia('(pointer: coarse), (max-width: 900px)').matches;
+	const dpr = Math.min(devicePixelRatio, mobile ? 1.5 : 2);
+	const renderer = new THREE.WebGLRenderer({ canvas, antialias: !mobile || devicePixelRatio < 2, alpha: true, powerPreference: mobile ? 'default' : 'high-performance' });
+	renderer.setPixelRatio(dpr);
 	renderer.outputColorSpace = THREE.SRGBColorSpace;
 	renderer.toneMapping = THREE.ACESFilmicToneMapping;
 	renderer.toneMappingExposure = 0.92;
