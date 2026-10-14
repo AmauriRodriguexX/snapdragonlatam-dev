@@ -66,14 +66,14 @@
 </div>
 
 <!-- (03) Comparador de chips -->
-<section class="border-t border-line bg-paper-2 py-28 lg:py-40">
+<section class="cv-auto border-t border-line bg-paper-2 py-28 lg:py-40" style="--cv: 966px">
 	<div class="container-x">
 		<ChipCompare />
 	</div>
 </section>
 
 <!-- Smartphones -->
-<section class="border-t border-line py-28 lg:py-40">
+<section class="cv-auto border-t border-line py-28 lg:py-40" style="--cv: 1715px">
 	<div class="container-x">
 		<div class="grid gap-10 border-b border-line pb-10 lg:grid-cols-12 lg:items-end">
 			<div class="lg:col-span-7" use:reveal>
@@ -94,14 +94,14 @@
 </section>
 
 <!-- Reviews -->
-<section class="border-t border-line py-28 lg:py-40">
+<section class="cv-auto border-t border-line py-28 lg:py-40" style="--cv: 1007px">
 	<div class="container-x">
 		<ReviewsCarousel reviews={homeReviews} title="¿No sabes por dónde empezar? Mira los reviews." index="05" />
 	</div>
 </section>
 
 <!-- #ShotOnSnapdragon -->
-<section class="overflow-hidden border-t border-line py-28 lg:py-36">
+<section class="cv-auto overflow-hidden border-t border-line py-28 lg:py-36" style="--cv: 688px">
 	<div class="container-x mb-12 flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
 		<div use:reveal>
 			<p class="label"><span class="text-red">(06)</span> — Hecho en Latam</p>
@@ -124,7 +124,7 @@
 </section>
 
 <!-- Comunidad -->
-<section class="border-t border-line py-28 lg:py-40">
+<section class="cv-auto border-t border-line py-28 lg:py-40" style="--cv: 1141px">
 	<div class="container-x">
 		<NewsletterForm />
 	</div>

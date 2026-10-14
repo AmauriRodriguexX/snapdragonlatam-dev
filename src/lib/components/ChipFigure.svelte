@@ -124,7 +124,7 @@
 		<path d={G.board.px} class="f-x" />
 		<path d={G.board.top} class="f-t" />
 		<path d={G.silk} class="silk" />
-		<path d={G.pads} class="pads" />
+		{#if s.ls > 0.5}<path d={G.pads} class="pads" />{/if}
 		<path d={G.vias} class="vias" />
 		<path d={G.rulerFront} class="ruler" />
 		<path d={G.screwRings} class="ring" />
@@ -203,7 +203,8 @@
 		<path d={G.dieGrid} class="die-grid" />
 		{#if energy > 0.02}<path d={G.dieGrid} class="die-charge hd" style:opacity={energy} />{/if}
 		{#each G.blocks as b}
-			<path d={b.slab.top} class="shadow dark" filter={soft} style:opacity={Math.min(0.5, (s.lb + extraOf(b.group) - s.ld) / 60)} />
+			{@const up = s.lb + extraOf(b.group) - s.ld}
+			{#if up > 0.5}<path d={b.slab.top} class="shadow dark" filter={soft} style:opacity={Math.min(0.5, up / 60)} />{/if}
 		{/each}
 	</g>
 

@@ -470,6 +470,8 @@
 	@media (prefers-reduced-motion: reduce) {
 		.tour-fill::after, .tour-ring { animation: none; }
 	}
+	/* El SVG se repinta a cada cuadro: contain evita que arrastre al resto de la página */
+	.anatomy-figure { contain: layout paint; }
 	.chapter {
 		grid-area: 1 / 1;
 		pointer-events: none;

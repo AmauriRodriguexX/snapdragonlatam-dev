@@ -36,7 +36,7 @@
 
 <header class="fixed inset-x-0 top-0 z-40 px-3 pt-3 lg:px-5 lg:pt-4">
 	<!-- El nombre de transición debe estar en el vidrio: en un ancestro aislaría su backdrop. -->
-	<div class="glass-effect {scrolled || open ? 'glass-effect--scrolled' : ''}" style="view-transition-name: site-header">
+	<div class="glass-effect backdrop-blur-[28px] backdrop-saturate-[1.65] {scrolled || open ? 'glass-effect--scrolled' : ''}" style="view-transition-name: site-header">
 		<div class="container-x flex h-16 items-center justify-between gap-6">
 			<a href={resolve('/')} class="flex items-center gap-2.5" aria-label="Snapdragon Latam, inicio" onclick={() => (open = false)}>
 				<img src={asset('/media/brand/logo-snapdragon-red.svg')} alt="Snapdragon" class="h-[18px] w-auto" width="112" height="22" />
@@ -113,8 +113,8 @@
 <style>
 	.glass-effect {
 		background: linear-gradient(120deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.38));
-		backdrop-filter: blur(28px) saturate(1.65);
-		-webkit-backdrop-filter: blur(28px) saturate(1.65);
+		/* El blur va en utilidades de Tailwind (backdrop-blur / backdrop-saturate): el minificador de producción
+		   eliminaba aquí `backdrop-filter` y sólo dejaba la versión -webkit-, así que en GitHub Pages no había vidrio. */
 		border-radius: 80px;
 		border: 1px solid rgba(255, 255, 255, 0.78);
 		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(255, 255, 255, 0.35);

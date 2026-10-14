@@ -140,6 +140,11 @@
 
 	.hairline { border-color: var(--color-line); }
 
+	/* Móvil: secciones bajo el pliegue sin trabajo de layout/pintura hasta que se acercan */
+	@media (max-width: 900px) {
+		.cv-auto { content-visibility: auto; contain-intrinsic-size: auto var(--cv, 760px); }
+	}
+
 	/* Botones */
 	.btn {
 		position: relative;
