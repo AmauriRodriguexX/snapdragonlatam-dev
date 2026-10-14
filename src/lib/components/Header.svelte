@@ -34,11 +34,9 @@
 
 <svelte:window onscroll={onScroll} onkeydown={(e) => e.key === 'Escape' && (open = false)} />
 
-<header
-	class="fixed inset-x-0 top-0 z-40"
-	style="view-transition-name: site-header"
->
-	<div class="border-b transition-colors duration-500 {scrolled || open ? 'border-line bg-paper/85 backdrop-blur-xl backdrop-saturate-150' : 'border-transparent bg-transparent'}">
+<header class="fixed inset-x-0 top-0 z-40 px-3 pt-3 lg:px-5 lg:pt-4">
+	<!-- El nombre de transición debe estar en el vidrio: en un ancestro aislaría su backdrop. -->
+	<div class="glass-effect {scrolled || open ? 'glass-effect--scrolled' : ''}" style="view-transition-name: site-header">
 		<div class="container-x flex h-16 items-center justify-between gap-6">
 			<a href={resolve('/')} class="flex items-center gap-2.5" aria-label="Snapdragon Latam, inicio" onclick={() => (open = false)}>
 				<img src={asset('/media/brand/logo-snapdragon-red.svg')} alt="Snapdragon" class="h-[18px] w-auto" width="112" height="22" />
@@ -84,7 +82,7 @@
 	<!-- Menú móvil a pantalla completa -->
 	<div
 		id="menu-movil"
-		class="fixed inset-x-0 top-16 bottom-0 bg-paper transition-[clip-path] duration-700 ease-[var(--ease-out-expo)] lg:hidden"
+		class="fixed inset-x-0 top-[4.75rem] bottom-0 bg-paper transition-[clip-path] duration-700 ease-[var(--ease-out-expo)] lg:hidden"
 		style:clip-path={open ? 'inset(0 0 0 0)' : 'inset(0 0 100% 0)'}
 		inert={!open}
 	>
@@ -112,3 +110,16 @@
 		</div>
 	</div>
 </header>
+<style>
+	.glass-effect {
+		background: linear-gradient(120deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.38));
+		backdrop-filter: blur(28px) saturate(1.65);
+		-webkit-backdrop-filter: blur(28px) saturate(1.65);
+		border-radius: 80px;
+		border: 1px solid rgba(255, 255, 255, 0.78);
+		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(255, 255, 255, 0.35);
+		transition: background 300ms ease;
+	}
+	.glass-effect--scrolled { background: linear-gradient(120deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.38)); }
+	@media (prefers-reduced-motion: reduce) { .glass-effect { transition: none; } }
+</style>

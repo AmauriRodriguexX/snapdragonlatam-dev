@@ -52,7 +52,7 @@
 		</div>
 		<div
 			bind:this={track}
-			class="no-scrollbar mt-10 flex gap-6 px-[max(1rem,calc((100vw-92rem)/2+2.75rem))] lg:gap-8 {pinned ? '' : 'snap-x snap-mandatory overflow-x-auto pb-2'}"
+			class="no-scrollbar mt-10 flex gap-6 px-[max(1rem,calc((100vw-92rem)/2+2.75rem))] scroll-px-[max(1rem,calc((100vw-92rem)/2+2.75rem))] lg:gap-8 {pinned ? '' : 'snap-x snap-mandatory overflow-x-auto pb-2'}"
 			style:transform={pinned ? `translate3d(${x}px,0,0)` : undefined}
 		>
 			{#each products as p, i (p.slug)}

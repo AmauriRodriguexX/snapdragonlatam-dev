@@ -26,7 +26,7 @@
 <HeroAnatomy />
 
 <!-- (01) Manifiesto -->
-<section class="border-t border-line py-28 lg:py-44">
+<section id="manifiesto" class="border-t border-line py-28 lg:py-44">
 	<div class="container-x grid gap-10 lg:grid-cols-12">
 		<p class="label lg:col-span-3"><span class="text-red">(01)</span> — Por qué Snapdragon</p>
 		<ScrollText

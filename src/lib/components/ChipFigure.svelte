@@ -28,9 +28,30 @@
 </script>
 
 <script lang="ts">
+	import { onMount } from 'svelte';
 	/** lite: sin filtros de desenfoque (móvil / pantallas táctiles): las sombras pasan a ser planas */
-	let { s, title = 'Anatomía del Snapdragon X Elite', lite = false }: { s: ChipState; title?: string; lite?: boolean } = $props();
+	let { s, title = 'Anatomía del Snapdragon X Elite', lite = false, portrait = false }: { s: ChipState; title?: string; lite?: boolean; portrait?: boolean } = $props();
 	const soft = $derived(lite ? undefined : 'url(#soft)');
+
+	// Energía en reposo: la placa "respira" corriente mientras el chip está armado y se apaga al separar las capas.
+	const EDGES = ['back', 'left', 'front', 'right'] as const;
+	const vb = $derived((portrait ? '-300 -20 700 425' : G.viewBox).split(' ').map(Number));
+	const cam = $derived(`translate(50 167.5) scale(${s.z}) translate(${-s.fx} ${-s.fy})`);
+	const energy = $derived(Math.max(0, Math.min(1, 1 - s.ls / 8)));
+	// Ritmo propio por pista (determinista): duración 1.9–3.1 s y fase repartida
+	const beat = (i: number) => {
+		const d = 1.9 + ((i * 7) % 5) * 0.3;
+		return `--d:${d}s;--o:${(-((i * 37) % 100) / 100) * d}s`;
+	};
+
+	// Sin pantalla no hay animación (CSS en pausa fuera de vista)
+	let svg: SVGSVGElement;
+	let offscreen = $state(false);
+	onMount(() => {
+		const io = new IntersectionObserver((entries) => (offscreen = !entries[entries.length - 1].isIntersecting), { rootMargin: '120px 0px' });
+		io.observe(svg);
+		return () => io.disconnect();
+	});
 
 	const extraOf = (g: string) => (g === 'cpu' ? s.cpu : g === 'gpu' ? s.gpu : g === 'npu' ? s.npu : 0);
 
@@ -49,7 +70,7 @@
 	}
 </script>
 
-<svg viewBox={G.viewBox} class="chip h-full w-full" role="img" aria-label={title}>
+<svg bind:this={svg} viewBox={vb.join(' ')} class="chip h-full w-full" class:offscreen role="img" aria-label={title}>
 	<defs>
 		<filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="7" /></filter>
 		<filter id="softer" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="14" /></filter>
@@ -58,9 +79,40 @@
 			<stop offset="0.48" stop-color="#fff" stop-opacity="0.09" />
 			<stop offset="0.52" stop-color="#fff" stop-opacity="0" />
 		</linearGradient>
+
+		{#each EDGES as k}
+			{@const f = G.fade[k]}
+			<linearGradient id="fade-{k}" gradientUnits="userSpaceOnUse" x1={f.x1} y1={f.y1} x2={f.x2} y2={f.y2}>
+				<stop offset="0" stop-color="#fff" />
+				<stop offset="0.3" stop-color="#fff" stop-opacity="0.85" />
+				<stop offset="1" stop-color="#fff" stop-opacity="0" />
+			</linearGradient>
+			<mask id="beyond-{k}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" x="-2000" y="-2000" width="4000" height="4000">
+				<rect x="-2000" y="-2000" width="4000" height="4000" fill="url(#fade-{k})" />
+			</mask>
+		{/each}
 	</defs>
 
-	<g transform="translate(50 167.5) scale({s.z}) translate({-s.fx} {-s.fy})">
+	{#if energy > 0.02}
+		<!-- Continuación fuera del recorte: la corriente sale del chip hacia el resto de la tarjeta madre -->
+		<g class="beyond" transform={cam} style:opacity={energy}>
+			{#each EDGES as k, e}
+				<g mask="url(#beyond-{k})">
+					{#each G.beyond[k] as r, i}
+						<path d={r.d} class="trace" />
+						<path d={r.end} class="vias ghost-via" />
+						<g style={beat(80 + e * 9 + i)}>
+							<path d={r.d} pathLength="100" class="tail" />
+							<path d={r.d} pathLength="100" class="spark" />
+							<path d={r.end} class="hit" />
+						</g>
+					{/each}
+				</g>
+			{/each}
+		</g>
+	{/if}
+
+	<g transform={cam}>
 	<!-- Halo bajo la base -->
 	<path d={G.board.top} transform="translate(0 26)" class="halo" class:lite filter={lite ? undefined : 'url(#softer)'} />
 
@@ -78,6 +130,29 @@
 		{#each G.traces as t}
 			<path d={t} class="trace" />
 		{/each}
+		{#each G.routes as r}
+			<path d={r.d} class="trace" class:power={r.power} />
+		{/each}
+		<path d={G.fingers} class="pads" />
+		<path d={G.edgeVias} class="vias" />
+		{#if energy > 0.02}
+			<!-- Corriente: un destello rojo con estela recorre cada pista y enciende su terminal al llegar -->
+			<g class="energy" style:opacity={energy}>
+				<path d={G.socFrame} class="soc-glow" />
+				{#each G.routes as r, i}
+					<g style={beat(i)}>
+						<path d={r.d} pathLength="100" class="tail" class:power={r.power} />
+						<path d={r.d} pathLength="100" class="spark" class:power={r.power} />
+						{#if r.end}<path d={r.end} class="hit" />{/if}
+					</g>
+				{/each}
+				{#if !lite}
+					{#each G.traces as t, i}
+						<g style={beat(i + 40)}><path d={t} pathLength="100" class="spark thin" /></g>
+					{/each}
+				{/if}
+			</g>
+		{/if}
 		{#if s.mem > 0.02}
 			<g class="pulses" style:opacity={s.mem}>
 				{#each G.traces as t, i}
@@ -124,6 +199,7 @@
 	<g class="lift" style:transform={lift(s.ld, 5)}>
 		<g class="solid die"><path d={G.die.py} class="f-y" /><path d={G.die.px} class="f-x" /><path d={G.die.top} class="f-t" /><path d={G.die.top} fill="url(#dieSheen)" /></g>
 		<path d={G.dieGrid} class="die-grid" />
+		{#if energy > 0.02}<path d={G.dieGrid} class="die-charge" style:opacity={energy} />{/if}
 		{#each G.blocks as b}
 			<path d={b.slab.top} class="shadow dark" filter={soft} style:opacity={Math.min(0.5, (s.lb + extraOf(b.group) - s.ld) / 60)} />
 		{/each}
@@ -146,6 +222,13 @@
 
 <style>
 	.chip { overflow: hidden; }
+	.beyond .trace { opacity: 0.9; }
+	.ghost-via { opacity: 0.8; }
+	@media (max-width: 639px) and (prefers-reduced-motion: no-preference) {
+		.chip { transform-origin: center; animation: chip-float 5.8s ease-in-out infinite; will-change: transform; }
+	}
+	@media (prefers-reduced-motion: reduce) { .chip { animation: none; } }
+	@keyframes chip-float { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(0, -5px, 0) scale(1.012); } }
 	.chip :global(path) { stroke-linejoin: round; stroke-linecap: round; }
 	.lift { will-change: transform; }
 	.halo.lite { opacity: 0.045; }
@@ -176,6 +259,29 @@
 		animation: flow 1.1s linear infinite;
 	}
 	@keyframes flow { to { stroke-dashoffset: -31; } }
+
+	/* Energía en reposo (pathLength = 100: cada destello mide lo mismo en pistas largas o cortas) */
+	.trace.power { stroke-width: 2.4; }
+	.energy { transition: opacity 0.6s; }
+	.spark, .tail { fill: none; animation: var(--d) linear var(--o) infinite; }
+	.spark { stroke: #e01224; stroke-width: 1.8; stroke-dasharray: 9 121; animation-name: spark; }
+	.spark.power { stroke-width: 2.6; }
+	.spark.thin { stroke-width: 1.2; }
+	.tail { stroke: #ff3b4a; stroke-width: 4.2; opacity: 0.22; stroke-dasharray: 20 110; animation-name: tail; }
+	.tail.power { stroke-width: 6; }
+	.hit { fill: #e01224; stroke: #7a000e; stroke-width: 0.3; opacity: 0; animation: hit var(--d) linear var(--o) infinite; }
+	.soc-glow { fill: none; stroke: #e01224; stroke-width: 1.1; animation: breathe 3.2s ease-in-out infinite alternate; }
+	.die-charge { fill: none; stroke: #ff2d3d; stroke-width: 0.7; animation: breathe 3.2s ease-in-out infinite alternate; }
+	@keyframes spark { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -130; } }
+	@keyframes tail { from { stroke-dashoffset: 11; } to { stroke-dashoffset: -119; } }
+	/* La cabeza del destello llega al final de la pista al ~70 % del ciclo */
+	@keyframes hit { 0%, 64% { opacity: 0; } 70% { opacity: 1; } 92%, 100% { opacity: 0; } }
+	@keyframes breathe { from { stroke-opacity: 0.12; } to { stroke-opacity: 0.6; } }
+	.chip.offscreen .energy *, .chip.offscreen .beyond *, .chip.offscreen .die-charge { animation-play-state: paused; }
+	@media (prefers-reduced-motion: reduce) {
+		.spark, .tail, .hit { display: none; }
+		.soc-glow, .die-charge { animation: none; stroke-opacity: 0.35; }
+	}
 
 	.smd .f-t { fill: #e6e3dc; } .smd .f-y { fill: #a4a097; } .smd .f-x { fill: #8b877f; }
 	.ind .f-t { fill: #3b3b40; } .ind .f-y { fill: #2a2a2e; } .ind .f-x { fill: #1d1d20; }

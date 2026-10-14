@@ -1,7 +1,7 @@
 // Geometría de la Fig. 01: Snapdragon X Elite sobre un fragmento de tarjeta madre.
 // Unidades de mundo ≈ px. El die sigue la foto anotada (ver DIE_MAP); el sustrato, los
 // capacitores y la placa son representativos. Las cifras salen de `chipFacts`.
-import { box, circle, cylinder, line, polyline, rect, ticks, type Box, type P3 } from './iso';
+import { box, circle, cylinder, line, polyline, project, rect, ticks, type Box, type P3 } from './iso';
 
 /** Datos reales. Fuente: Qualcomm, ficha Snapdragon X Elite (X1E-84-100) y sitio legacy snapdragonlatam.com */
 export const chipFacts = {
@@ -105,6 +105,27 @@ function sramGrid(x: number, y: number, w: number, d: number, z: number, nx: num
 	return g;
 }
 
+/** Pista con esquinas en chaflán a 45° (como en un PCB real). Puntos en el plano z = 0. */
+function route(pts: [number, number][], r = 4) {
+	const out: P3[] = [[pts[0][0], pts[0][1], 0]];
+	for (let i = 1; i < pts.length - 1; i++) {
+		const [ax, ay] = pts[i - 1], [bx, by] = pts[i], [cx, cy] = pts[i + 1];
+		const l1 = Math.hypot(bx - ax, by - ay), l2 = Math.hypot(cx - bx, cy - by);
+		const k1 = Math.min(r, l1 / 2) / l1, k2 = Math.min(r, l2 / 2) / l2;
+		out.push([bx - (bx - ax) * k1, by - (by - ay) * k1, 0], [bx + (cx - bx) * k2, by + (cy - by) * k2, 0]);
+	}
+	const e = pts[pts.length - 1];
+	out.push([e[0], e[1], 0]);
+	return polyline(out);
+}
+
+/** Pista con energía: `d` va en el sentido del flujo; `end` es la vía o pad donde llega (si se ve). */
+export interface Route {
+	d: string;
+	end?: string;
+	power?: boolean;
+}
+
 function buildBlocks(): Block[] {
 	const count: Record<string, number> = {};
 	return DIE_MAP.map((m, n) => {
@@ -201,6 +222,88 @@ export function buildChip() {
 	for (let i = 0; i < 11; i++) smd.push(box(160 + i * 13, 44, 0, 6, 3, 1.6));
 	for (let i = 0; i < 9; i++) smd.push(box(326, 132 + i * 11, 0, 3, 6, 1.6));
 
+	// --- Pistas con energía (estado de reposo) --------------------------------
+	// Todas nacen o mueren bajo el sustrato y terminan en algo real: inductor, vía o pad.
+	const routes: Route[] = [];
+	// Alimentación: VRM → lado derecho del SoC (pistas anchas)
+	[34, 60, 86, 112].forEach((yc, k) => {
+		const xv = 322 + k * 6, yt = 86 + k * 12;
+		routes.push({ d: route([[352, yc], [xv, yc], [xv, yt], [304, yt]]), power: true });
+	});
+	// Fan‑out trasero: SoC → entre los SMD → vías en el borde de atrás
+	let edgeVias = '';
+	for (let i = 0; i < 10; i++) {
+		const xg = 169.5 + 13 * i, xe = xg + (i - 4.5) * 4;
+		const end = circle(xe, 12, 0, 1.7, 10);
+		edgeVias += end;
+		routes.push({ d: route([[xg, 74], [xg, 36], [xe, 36 - Math.abs(xe - xg)], [xe, 13.7]]), end });
+	}
+	// Fan‑out frontal: SoC → hacia el campo de vías
+	for (let j = 0; j < 11; j++) {
+		const x = 200 + j * 10, L = 4 + (10 - j) * 2.4, ye = 268 + L + (j % 3) * 8;
+		const end = circle(x + 30, ye + 1.7, 0, 1.7, 10);
+		edgeVias += end;
+		routes.push({ d: route([[x, 226], [x, 230 + L], [x + 30, 260 + L], [x + 30, ye]]), end });
+	}
+	// Bus lateral: SoC → entre los SMD → conector de borde (pads dorados)
+	let fingers = '';
+	for (let k = 0; k < 8; k++) {
+		const y = 151.5 + 11 * k, yf = y + 40;
+		const end = rect(420, yf - 2.5, 0, 19.5, 5); // los dedos llegan al canto, como en un conector real
+		fingers += end;
+		routes.push({ d: route([[304, y], [340, y], [380, yf], [420, yf]]), end });
+	}
+	const socFrame = rect(SUB.x - 6, SUB.y - 6, 0, SUB.w + 12, SUB.d + 12);
+
+	// --- Continuación fuera del recorte -----------------------------------------
+	// La figura es un fragmento de una tarjeta madre más grande: las pistas siguen más allá
+	// del borde hacia el resto de la placa y se desvanecen (convención de corte en dibujo técnico).
+	// Nacen bajo el borde (4 u adentro), salen en haces paralelos con un quiebre a 45° y terminan en vía.
+	type Edge = 'back' | 'left' | 'front' | 'right';
+	const EDGE: Record<Edge, { o: (a: number) => [number, number]; out: [number, number]; al: [number, number] }> = {
+		back: { o: (a) => [a, 0], out: [0, -1], al: [1, 0] },
+		left: { o: (a) => [0, a], out: [-1, 0], al: [0, 1] },
+		front: { o: (a) => [a, BOARD.d], out: [0, 1], al: [1, 0] },
+		right: { o: (a) => [BOARD.w, a], out: [1, 0], al: [0, 1] }
+	};
+	const beyond: Record<Edge, Route[]> = { back: [], left: [], front: [], right: [] };
+	const bundle = (edge: Edge, at: number, n: number, jog: 1 | -1, gap = 6, t = 14, D = 18) => {
+		const { o, out, al } = EDGE[edge];
+		const [ox, oy] = o(at);
+		const P = (a: number, u: number): [number, number] => [ox + al[0] * a + out[0] * u, oy + al[1] * a + out[1] * u];
+		for (let i = 0; i < n; i++) {
+			const a = (i - (n - 1) / 2) * gap;
+			const ti = t - 0.6 * a * jog; // el de afuera del quiebre gira antes: diagonales paralelas
+			const e = ti + D + 20 + ((i * 13) % 4) * 12;
+			const [ex, ey] = P(a + jog * D, e);
+			const end = circle(ex + out[0] * 1.6, ey + out[1] * 1.6, 0, 1.5, 10);
+			beyond[edge].push({ d: route([P(a, -4), P(a, ti), P(a + jog * D, ti + D), [ex, ey]]), end });
+		}
+	};
+	bundle('back', 70, 4, 1);
+	bundle('back', 205, 5, -1);
+	bundle('back', 335, 4, 1);
+	bundle('left', 60, 4, -1);
+	bundle('left', 170, 5, 1);
+	bundle('left', 272, 3, -1);
+	bundle('right', 70, 4, -1);
+	bundle('right', 230, 8, 1, 11, 30); // continúa el conector de borde
+	bundle('front', 120, 4, -1, 6, 10, 12);
+	bundle('front', 300, 3, 1, 6, 10, 12);
+	// Degradado de desvanecimiento por borde, en pantalla: perpendicular al borde, ~70 px hacia afuera
+	const fade = Object.fromEntries(
+		(Object.keys(EDGE) as Edge[]).map((k) => {
+			const { o, out, al } = EDGE[k];
+			const [x0, y0] = project(...o(0), 0);
+			const [ax, ay] = project(o(0)[0] + al[0], o(0)[1] + al[1], 0);
+			let nx = -(ay - y0), ny = ax - x0;
+			const [ux, uy] = project(o(0)[0] + out[0], o(0)[1] + out[1], 0);
+			if (nx * (ux - x0) + ny * (uy - y0) < 0) (nx = -nx), (ny = -ny);
+			const l = Math.hypot(nx, ny);
+			return [k, { x1: x0, y1: y0, x2: x0 + (nx / l) * 70, y2: y0 + (ny / l) * 70 }];
+		})
+	) as Record<Edge, { x1: number; y1: number; x2: number; y2: number }>;
+
 	// --- Sustrato del SoC --------------------------------------------------
 	const substrate = box(SUB.x, SUB.y, zSub, SUB.w, SUB.d, SUB.h);
 	const pin1 = polyline([
@@ -240,6 +343,12 @@ export function buildChip() {
 		vias,
 		memory,
 		traces,
+		routes,
+		edgeVias,
+		fingers,
+		socFrame,
+		beyond,
+		fade,
 		inductors,
 		caps,
 		pmic,
