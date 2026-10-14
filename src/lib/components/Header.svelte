@@ -17,32 +17,9 @@
 
 	let open = $state(false);
 	let scrolled = $state(false);
-	let hidden = $state(false);
-	let lastY = 0;
-	let acc = 0;
 
-	// Histéresis: el scroll suave genera micro‑cambios de dirección; solo se oculta tras
-	// bajar ~80 px seguidos y solo reaparece tras subir ~40 px (evita el parpadeo).
 	function onScroll() {
-		const y = scrollY;
-		const d = y - lastY;
-		lastY = y;
-		scrolled = y > 8;
-		// Dentro de una sección fija (anatomía, laptop 3D) el nav se queda visible:
-		// esas vistas le reservan su espacio arriba y ocultarlo deja un hueco.
-		const keep = [...document.querySelectorAll('[data-keep-nav]')].some((el) => {
-			const r = el.getBoundingClientRect();
-			return r.top <= 1 && r.bottom >= innerHeight - 1;
-		});
-		if (open || y < 120 || keep) {
-			hidden = false;
-			acc = 0;
-			return;
-		}
-		if ((d > 0 && acc < 0) || (d < 0 && acc > 0)) acc = 0;
-		acc += d;
-		if (!hidden && acc > 80) hidden = true;
-		else if (hidden && acc < -40) hidden = false;
+		scrolled = scrollY > 8;
 	}
 
 	$effect(() => {
@@ -58,8 +35,7 @@
 <svelte:window onscroll={onScroll} onkeydown={(e) => e.key === 'Escape' && (open = false)} />
 
 <header
-	class="fixed inset-x-0 top-0 z-40 transition-[transform,background-color,border-color] duration-700 ease-[var(--ease-out-expo)]"
-	class:-translate-y-full={hidden}
+	class="fixed inset-x-0 top-0 z-40"
 	style="view-transition-name: site-header"
 >
 	<div class="border-b transition-colors duration-500 {scrolled || open ? 'border-line bg-paper/85 backdrop-blur-xl backdrop-saturate-150' : 'border-transparent bg-transparent'}">

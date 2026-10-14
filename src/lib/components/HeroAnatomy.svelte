@@ -92,7 +92,7 @@
 		function tick(now: number) {
 			const dt = Math.min(0.05, (now - last) / 1000);
 			last = now;
-			const k = reduced ? 1 : 1 - Math.exp(-dt * 7);
+			const k = reduced ? 1 : 1 - Math.exp(-dt * 10);
 			pp += (p - pp) * k;
 			const t = sample(pp);
 			const n = { ...s };
@@ -129,7 +129,7 @@
 	// Punto de reposo de cada capítulo: donde su animación ya terminó
 	const REST = [0, 0.25, 0.42, 0.56, 0.7, 0.84, 0.97];
 	const yOf = (v: number) => section.getBoundingClientRect().top + scrollY + (section.offsetHeight - innerHeight) * v;
-	const goTo = (i: number, duration = 1.6) => scrollToY(yOf(REST[i]), { duration });
+	const goTo = (i: number, duration = 1.1) => scrollToY(yOf(REST[i]), { duration });
 
 	// ---- Tour automático (tipo slider) ----
 	const DWELL = 4200;
@@ -201,7 +201,7 @@
 			const dy = Math.abs(yOf(REST[n]) - scrollY);
 			if (dy < 6) return;
 			snapping = true;
-			await goTo(n, Math.min(1.1, 0.5 + dy / 900));
+			await goTo(n, Math.min(0.9, 0.35 + dy / 1400));
 			snapping = false;
 		};
 		const onScroll = () => {
@@ -218,7 +218,7 @@
 	const cls = (i: number) => (chapter === i ? 'is-visible' : chapter > i ? 'is-past' : '');
 </script>
 
-<section bind:this={section} data-keep-nav class="relative" style="height: 760vh" use:scrollProgress={(v) => { p = v; wake(); }} aria-label="Anatomía del procesador Snapdragon X Elite">
+<section bind:this={section} class="relative h-[400svh] md:h-[440svh]" use:scrollProgress={(v) => { p = v; wake(); }} aria-label="Anatomía del procesador Snapdragon X Elite">
 	<div class="sticky top-0 h-svh overflow-hidden">
 		<!-- Retícula técnica -->
 		<div class="grid-paper pointer-events-none absolute inset-0 opacity-70 [mask-image:radial-gradient(75%_70%_at_62%_52%,#000_10%,transparent_75%)]" aria-hidden="true"></div>
@@ -240,18 +240,20 @@
 				<button
 					type="button"
 					onclick={toggleTour}
-					class="group absolute bottom-3 left-3 z-10 flex items-center gap-3 rounded-full border border-line-2 bg-paper/90 py-1.5 pr-4 pl-1.5 backdrop-blur transition-colors hover:border-ink lg:bottom-5 lg:left-5"
+					class="group absolute bottom-16 left-3 z-10 flex items-center gap-3 rounded-full border border-line-2 bg-paper/90 py-1.5 pr-4 pl-1.5 backdrop-blur transition-colors hover:border-ink lg:bottom-5 lg:left-5"
 					aria-pressed={playing}
+					aria-label={playing ? 'Pausar tour guiado' : 'Reproducir tour guiado'}
 				>
-					<span class="relative grid h-8 w-8 place-items-center rounded-full bg-ink text-paper transition-colors group-hover:bg-red">
+					<span class="tour-icon relative grid h-8 w-8 place-items-center rounded-full bg-ink text-paper transition-colors group-hover:bg-red">
 						{#if playing}
-							<svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><rect x="1.5" y="1" width="2.4" height="8" /><rect x="6.1" y="1" width="2.4" height="8" /></svg>
+							<span class="tour-ring absolute -inset-1 rounded-full border border-red/70" aria-hidden="true"></span>
+							<svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><rect x="1.5" y1="1" width="2.4" height="8" /><rect x="6.1" y="1" width="2.4" height="8" /></svg>
 						{:else}
 							<svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" class="ml-0.5"><path d="M2 1l7 4-7 4z" /></svg>
 							<span class="absolute inset-0 rounded-full animate-pulse-dot"></span>
 						{/if}
 					</span>
-					<span class="label label-ink">{playing ? `Tour · capa ${chapter} / 6` : chapter === 0 ? 'Ver tour del chip · 36 s' : `Continuar tour · ${RAIL[chapter]}`}</span>
+					<span class="label label-ink" aria-live="polite" aria-atomic="true">{playing ? `Tour · capa ${chapter} / 6` : chapter === 0 ? 'Ver tour del chip · 36 s' : `Continuar tour · ${RAIL[chapter]}`}</span>
 				</button>
 				<div class="absolute right-4 bottom-3 text-right lg:right-5 lg:bottom-5" aria-live="polite">
 					<div class="label">{readout.k}</div>
@@ -337,13 +339,13 @@
 		</div>
 
 		<!-- Riel de capítulos -->
-		<nav class="absolute inset-x-0 bottom-0 hidden border-t border-line bg-paper/90 sm:block" aria-label="Capítulos de la anatomía">
+		<nav class="absolute inset-x-0 bottom-0 hidden border-t border-line bg-paper/90 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] backdrop-blur-md sm:block lg:pb-0" aria-label="Capítulos de la anatomía">
 			<div class="container-x flex items-stretch">
 				<div class="mr-3 flex items-center gap-1 border-r border-line pr-3 sm:mr-5 sm:pr-5">
 					<button type="button" onclick={() => step(-1)} disabled={chapter === 0} class="grid h-8 w-8 place-items-center rounded-full transition-colors hover:bg-paper-3 disabled:opacity-30" aria-label="Capa anterior">
 						<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M7.5 2 3.5 6l4 4" stroke="currentColor" stroke-width="1.4" /></svg>
 					</button>
-					<button type="button" onclick={toggleTour} class="grid h-8 w-8 place-items-center rounded-full bg-ink text-paper transition-colors hover:bg-red" aria-label={playing ? 'Pausar tour' : 'Reproducir tour'} aria-pressed={playing}>
+					<button type="button" onclick={toggleTour} class="hidden h-8 w-8 place-items-center rounded-full bg-ink text-paper transition-colors hover:bg-red lg:grid" aria-label={playing ? 'Pausar tour' : 'Reproducir tour'} aria-pressed={playing}>
 						{#if playing}
 							<svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><rect x="1.5" y="1" width="2.4" height="8" /><rect x="6.1" y="1" width="2.4" height="8" /></svg>
 						{:else}
@@ -381,8 +383,23 @@
 </section>
 
 <style>
-	.tour-fill { width: 0; animation: tour-fill linear forwards; }
+	.tour-fill { width: 0; overflow: hidden; animation: tour-fill linear forwards; box-shadow: 0 0 8px rgb(224 18 36 / 0.55); }
+	.tour-fill::after {
+		content: '';
+		position: absolute;
+		inset: 0 auto 0 -1.5rem;
+		width: 1.5rem;
+		background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.95), transparent);
+		animation: tour-shimmer 1.1s ease-in-out infinite;
+	}
+	.tour-ring { animation: tour-ring 1.5s var(--ease-out-quart) infinite; }
+	button[aria-pressed="true"] .tour-icon { background-color: var(--color-red); }
 	@keyframes tour-fill { to { width: 100%; } }
+	@keyframes tour-shimmer { to { transform: translateX(3rem); } }
+	@keyframes tour-ring { 0% { transform: scale(0.8); opacity: 0.8; } 100% { transform: scale(1.8); opacity: 0; } }
+	@media (prefers-reduced-motion: reduce) {
+		.tour-fill::after, .tour-ring { animation: none; }
+	}
 	.chapter {
 		grid-area: 1 / 1;
 		pointer-events: none;
