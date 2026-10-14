@@ -32,7 +32,7 @@
 		<div class="mb-14 flex flex-col justify-between gap-6 lg:flex-row lg:items-end" use:reveal>
 			<div>
 				<p class="label"><span class="text-red">(01)</span> — Galería</p>
-				<h2 class="display mt-5 text-[clamp(2.4rem,5vw,4.6rem)]">#ShotOn<span class="accent">Snapdragon</span></h2>
+				<h2 class="display mt-5 text-[clamp(2.1rem,9.5vw,3.2rem)] sm:text-[clamp(2.4rem,5vw,4.6rem)]">#ShotOn<span class="accent">Snapdragon</span></h2>
 			</div>
 			<p class="max-w-sm leading-relaxed text-ink-2">Fotos tomadas por la comunidad en México, Colombia, Chile, Argentina, Uruguay y toda la región.</p>
 		</div>

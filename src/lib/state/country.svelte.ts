@@ -3,11 +3,20 @@ import { countries, type CountryCode } from '#lib/data/content';
 
 const KEY = 'sd-country';
 
+/** localStorage puede fallar (navegación privada, datos bloqueados): nunca debe romper la página. */
+function read(): CountryCode | null {
+	try {
+		return localStorage.getItem(KEY) as CountryCode | null;
+	} catch {
+		return null;
+	}
+}
+
 /** País del usuario (hallazgo §3.2: no había selector de país).
  *  Se persiste en localStorage; el primer valor se infiere del idioma del navegador. */
 function detect(): CountryCode {
 	if (!browser) return 'MX';
-	const saved = localStorage.getItem(KEY) as CountryCode | null;
+	const saved = read();
 	if (saved && countries.some((c) => c.code === saved)) return saved;
 	const region = navigator.language.split('-')[1]?.toUpperCase() as CountryCode | undefined;
 	return region && countries.some((c) => c.code === region) ? region : 'MX';
@@ -19,7 +28,7 @@ class CountryState {
 
 	init() {
 		this.code = detect();
-		this.confirmed = browser && localStorage.getItem(KEY) !== null;
+		this.confirmed = browser && read() !== null;
 	}
 
 	get current() {
@@ -29,7 +38,13 @@ class CountryState {
 	set(code: CountryCode) {
 		this.code = code;
 		this.confirmed = true;
-		if (browser) localStorage.setItem(KEY, code);
+		if (browser) {
+			try {
+				localStorage.setItem(KEY, code);
+			} catch {
+				/* sin persistencia: la selección sigue vigente en memoria */
+			}
+		}
 	}
 }
 

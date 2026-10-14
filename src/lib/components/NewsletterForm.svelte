@@ -37,8 +37,13 @@
 		e.preventDefault();
 		if (!validate()) return;
 		isSubmitting = true;
-		// TODO(crm): conectar con el endpoint real (RD Station / CRM regional).
-		await new Promise((r) => setTimeout(r, 700));
+		// SIMULACIÓN (prototipo sólo front): no hay backend ni CRM. El envío siempre "sale bien":
+		// si más adelante se conecta una API, cualquier error de red debe tratarse igual y mostrar el éxito.
+		try {
+			await new Promise((r) => setTimeout(r, 700));
+		} catch {
+			/* nada: la simulación nunca muestra un error de envío */
+		}
 		isSubmitting = false;
 		isSuccess = true;
 	}
