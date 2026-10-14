@@ -37,56 +37,85 @@
 	let section: HTMLElement;
 	let canvas: HTMLCanvasElement;
 	let box: HTMLDivElement;
-	let failed = $state(false);
 	let ready = $state(false);
+	let wake = () => {};
 
 	onMount(() => {
 		let destroyed = false;
-		let cleanup = () => {};
-		(async () => {
+		let initializing = false;
+		let visible = false;
+		let raf = 0;
+		let last = 0;
+		let cur = sample(p);
+		let draw = (_pose: LaptopPose) => {};
+		let cleanupRenderer = () => {};
+		const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+		function tick(now: number) {
+			const dt = Math.min(0.05, (now - last) / 1000);
+			last = now;
+			const k = reduced ? 1 : 1 - Math.exp(-dt * 6);
+			const target = sample(p);
+			let moving = false;
+			for (const key of Object.keys(target) as (keyof LaptopPose)[]) {
+				const d = target[key] - cur[key];
+				if (Math.abs(d) > 0.001) moving = true;
+				cur[key] += d * k;
+			}
+			if (moving) draw(cur);
+			raf = visible && moving ? requestAnimationFrame(tick) : 0;
+		}
+
+		wake = () => {
+			if (!visible || !ready || raf) return;
+			last = performance.now();
+			raf = requestAnimationFrame(tick);
+		};
+
+		const proximityObserver = new IntersectionObserver(([entry]) => {
+			if (entry.isIntersecting) void initialize();
+		}, { rootMargin: '600px 0px' });
+		const visibilityObserver = new IntersectionObserver(([entry]) => {
+			visible = entry.isIntersecting;
+			if (visible) wake();
+			else if (raf) {
+				cancelAnimationFrame(raf);
+				raf = 0;
+			}
+		});
+		proximityObserver.observe(section);
+		visibilityObserver.observe(section);
+
+		async function initialize() {
+			if (initializing || ready || destroyed) return;
+			initializing = true;
 			try {
 				const { createZenbook } = await import('#lib/three/zenbook');
 				if (destroyed) return;
-				let cur = sample(p);
 				const z = createZenbook(canvas, () => z?.render(cur));
-				const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-								let visible = false;
-				let raf = 0;
-				let last = performance.now();
+				draw = (pose) => z.render(pose);
 				const resize = () => z.setSize(box.clientWidth, box.clientHeight);
 				const ro = new ResizeObserver(() => { resize(); z.render(cur); });
 				ro.observe(box);
 				resize();
 				z.render(cur);
+				cleanupRenderer = () => { ro.disconnect(); z.dispose(); };
 				ready = true;
-				const tick = (now: number) => {
-					const dt = Math.min(0.05, (now - last) / 1000);
-					last = now;
-					const k = reduced ? 1 : 1 - Math.exp(-dt * 6);
-					const t = sample(p);
-					let moving = false;
-					for (const key of Object.keys(t) as (keyof LaptopPose)[]) {
-						const d = t[key] - cur[key];
-						if (Math.abs(d) > 0.001) moving = true;
-						cur[key] += d * k;
-					}
-					if (moving) z.render(cur);
-					raf = visible ? requestAnimationFrame(tick) : 0;
-				};
-				const io = new IntersectionObserver(([e]) => {
-					visible = e.isIntersecting;
-					if (visible && !raf) { last = performance.now(); raf = requestAnimationFrame(tick); }
-				});
-				io.observe(section);
-				cleanup = () => { cancelAnimationFrame(raf); io.disconnect(); ro.disconnect(); z.dispose(); };
+				wake();
 			} catch (e) {
 				console.warn('[zenbook] WebGL no disponible', e);
-				failed = true;
 			}
-		})();
-		return () => { destroyed = true; cleanup(); };
-	});
+		}
 
+		return () => {
+			destroyed = true;
+			proximityObserver.disconnect();
+			visibilityObserver.disconnect();
+			cancelAnimationFrame(raf);
+			cleanupRenderer();
+			wake = () => {};
+		};
+	});
 	const cls = (i: number) => (chapter === i ? 'is-visible' : chapter > i ? 'is-past' : '');
 	const chapters = [
 		{ k: 'ASUS Zenbook A14', l1: 'Menos de 1 kg.', l2: 'Ábrela.', body: 'Una Copilot+ PC de 14" con chasis de Ceraluminum™: el material cerámico‑aluminio de ASUS, ligero y resistente al tacto.', stats: [['Peso', `${Z.weightKg} kg`], ['Chasis', 'Ceraluminum™'], ['Color', 'Zabriskie Beige']] },
@@ -102,7 +131,7 @@
 	];
 </script>
 
-<section bind:this={section} data-keep-nav class="relative border-t border-line" style="height: 520vh" use:scrollProgress={(v) => (p = v)} aria-label="ASUS Zenbook A14 en 3D">
+<section bind:this={section} data-keep-nav class="relative border-t border-line" style="height: 520vh" use:scrollProgress={(v) => { p = v; wake(); }} aria-label="ASUS Zenbook A14 en 3D">
 	<div class="sticky top-0 h-svh overflow-hidden">
 		<div class="container-x relative grid h-full grid-rows-[minmax(0,1fr)_auto] gap-2 pt-20 pb-10 lg:grid-cols-12 lg:grid-rows-1 lg:gap-8 lg:pt-24 lg:pb-16">
 			<!-- Modelo -->
@@ -110,10 +139,8 @@
 				<div class="label absolute top-3 left-1 z-10 lg:top-4"><span class="label-ink">Fig. 03</span> — Modelo 3D en tiempo real</div>
 				<div class="label absolute top-3 right-1 z-10 text-right lg:top-4">{Z.name} · {Z.model}</div>
 				<div bind:this={box} class="absolute inset-0 top-8 bottom-12">
-					<canvas bind:this={canvas} class="h-full w-full transition-opacity duration-1000 {ready ? 'opacity-100' : 'opacity-0'}" aria-hidden="true"></canvas>
-					{#if failed}
-						<img src={asset(product.image)} alt="ASUS Zenbook A14" class="absolute inset-0 m-auto h-full w-full object-contain p-8" />
-					{/if}
+					<img src={asset(product.image)} alt="ASUS Zenbook A14" class="absolute inset-0 m-auto h-full w-full object-contain p-8 transition-opacity duration-300 {ready ? 'opacity-0' : 'opacity-100'}" loading="lazy" decoding="async" aria-hidden={ready} />
+					<canvas bind:this={canvas} class="h-full w-full transition-opacity duration-300 {ready ? 'opacity-100' : 'opacity-0'}" aria-hidden="true"></canvas>
 				</div>
 				<div class="absolute right-1 bottom-1 text-right" aria-live="polite">
 					<div class="label">{readouts[chapter][0]}</div>

@@ -250,7 +250,7 @@
 							<svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><rect x="1.5" y="1" width="2.4" height="8" /><rect x="6.1" y="1" width="2.4" height="8" /></svg>
 						{:else}
 							<svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" class="ml-0.5"><path d="M2 1l7 4-7 4z" /></svg>
-							<span class="absolute inset-0 rounded-full animate-pulse-dot"></span>
+							<span class="pointer-events-none absolute inset-0 rounded-full animate-pulse-dot"></span>
 						{/if}
 					</span>
 					<span class="label label-ink" aria-live="polite" aria-atomic="true">{playing ? `Tour · capa ${chapter} / 6` : chapter === 0 ? 'Ver tour del chip · 36 s' : `Continuar tour · ${RAIL[chapter]}`}</span>
@@ -278,7 +278,7 @@
 						<span class="line-mask"><span style="--i:0">Haz realidad</span></span>
 						<span class="line-mask"><span style="--i:1" class="accent">más cosas.</span></span>
 					</h1>
-					<p class="fade mt-6 max-w-md text-base leading-relaxed text-ink-2 lg:text-lg">
+					<p class="mt-6 max-w-md text-base leading-relaxed text-ink-2 lg:text-lg">
 						Copilot+ PC con IA en el dispositivo, CPU Qualcomm Oryon™ y batería para todo el día. Desplázate y mira cómo funciona por dentro.
 					</p>
 					<div class="fade mt-8 hidden flex-wrap gap-3 sm:flex">

@@ -2,7 +2,6 @@
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import { onNavigate, afterNavigate } from '$app/navigation';
-	import Lenis from 'lenis';
 	import Header from '#lib/components/Header.svelte';
 	import Footer from '#lib/components/Footer.svelte';
 	import VideoModal from '#lib/components/VideoModal.svelte';
@@ -16,17 +15,32 @@
 
 	onMount(() => {
 		country.init();
-		if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-		const lenis = new Lenis({ lerp: 0.1, wheelMultiplier: 1, anchors: true });
-		smooth.lenis = lenis;
-		let raf = requestAnimationFrame(function loop(t) {
-			lenis.raf(t);
-			raf = requestAnimationFrame(loop);
-		});
+		if (
+			matchMedia('(prefers-reduced-motion: reduce)').matches ||
+			matchMedia('(pointer: coarse), (max-width: 900px)').matches
+		) return;
+
+		let destroyed = false;
+		let cleanupLenis = () => {};
+		void import('lenis').then(({ default: Lenis }) => {
+			if (destroyed) return;
+			const lenis = new Lenis({ lerp: 0.1, wheelMultiplier: 1, anchors: true });
+			smooth.lenis = lenis;
+			if (modal.video || modal.countryOpen) lenis.stop();
+			let raf = requestAnimationFrame(function loop(t) {
+				lenis.raf(t);
+				raf = requestAnimationFrame(loop);
+			});
+			cleanupLenis = () => {
+				cancelAnimationFrame(raf);
+				lenis.destroy();
+				if (smooth.lenis === lenis) smooth.lenis = null;
+			};
+		}).catch((error) => console.warn('[scroll] Lenis no disponible', error));
+
 		return () => {
-			cancelAnimationFrame(raf);
-			lenis.destroy();
-			smooth.lenis = null;
+			destroyed = true;
+			cleanupLenis();
 		};
 	});
 
