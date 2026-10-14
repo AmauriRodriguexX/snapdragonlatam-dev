@@ -1,4 +1,5 @@
 <script lang="ts">
+	const WORD = 'Snapdragon'.split('');
 	import { asset, resolve } from '$app/paths';
 	import { socials } from '#lib/data/content';
 	import { country } from '#lib/state/country.svelte';
@@ -82,8 +83,11 @@
 	</div>
 
 	<!-- Wordmark gigante -->
-	<div class="pointer-events-none select-none" aria-hidden="true">
-		<p class="display translate-y-[18%] text-center text-[19.5vw] leading-[0.8] tracking-[-0.07em] text-ink">Snapdragon</p>
+	<!-- Ola roja de izquierda a derecha: cada letra de la capa roja sube y baja de opacidad con retraso escalonado.
+	     Ambas capas se parten igual (inline-block) para que la roja calce exacto sobre la tinta; sólo se anima opacidad (GPU). -->
+	<div class="wordmark pointer-events-none relative select-none pt-[0.04em] pb-[0.1em] text-[17.8vw]" aria-hidden="true">
+		<p class="display text-center leading-[0.9] tracking-[-0.07em] whitespace-nowrap text-ink">{#each WORD as c}<span class="inline-block">{c}</span>{/each}</p>
+		<p class="display absolute inset-x-0 top-[0.04em] text-center leading-[0.9] tracking-[-0.07em] whitespace-nowrap">{#each WORD as c, i}<span class="wave inline-block" style:animation-delay="{i * 0.16}s">{c}</span>{/each}</p>
 	</div>
 
 	<div class="relative border-t border-line bg-paper">
@@ -95,3 +99,21 @@
 		</div>
 	</div>
 </footer>
+
+<style>
+	.wave {
+		color: var(--color-red);
+		opacity: 0;
+		will-change: opacity;
+		animation: wordmark-wave 3.6s ease-in-out infinite;
+	}
+	/* La cresta recorre las letras: sube rápido, se sostiene un instante y baja; el resto del ciclo descansa en tinta */
+	@keyframes wordmark-wave {
+		0%, 52%, 100% { opacity: 0; }
+		16% { opacity: 0.95; }
+		26% { opacity: 0.95; }
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.wave { animation: none; opacity: 0; }
+	}
+</style>
