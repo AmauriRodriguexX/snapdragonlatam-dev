@@ -1,5 +1,36 @@
 <script lang="ts">
 	const WORD = 'Snapdragon'.split('');
+
+	// Con mouse el rojo sigue al puntero: cada letra se enciende según su cercanía a la X del cursor.
+	// La ola automática se apaga con un fundido mientras hay puntero encima y vuelve al salir.
+	let wordEl: HTMLElement;
+	let following = $state(false);
+	let heat = $state<number[]>(WORD.map(() => 0));
+	let raf = 0;
+	let lastX = 0;
+
+	function paint() {
+		raf = 0;
+		const spans = wordEl.querySelectorAll<HTMLElement>('[data-ink] span');
+		if (!spans.length) return;
+		const w = spans[0].getBoundingClientRect().width || 1;
+		const sigma = w * 1.15; // el rojo cubre ~3 letras alrededor del cursor
+		heat = [...spans].map((el) => {
+			const r = el.getBoundingClientRect();
+			const d = (lastX - (r.left + r.width / 2)) / sigma;
+			return Math.exp(-d * d);
+		});
+	}
+	function onMove(e: PointerEvent) {
+		if (e.pointerType !== 'mouse') return;
+		following = true;
+		lastX = e.clientX;
+		raf ||= requestAnimationFrame(paint);
+	}
+	function onLeave() {
+		following = false;
+		heat = WORD.map(() => 0);
+	}
 	import { asset, resolve } from '$app/paths';
 	import { socials } from '#lib/data/content';
 	import { country } from '#lib/state/country.svelte';
@@ -85,9 +116,10 @@
 	<!-- Wordmark gigante -->
 	<!-- Ola roja de izquierda a derecha: cada letra de la capa roja sube y baja de opacidad con retraso escalonado.
 	     Ambas capas se parten igual (inline-block) para que la roja calce exacto sobre la tinta; sólo se anima opacidad (GPU). -->
-	<div class="wordmark pointer-events-none relative select-none pt-[0.04em] pb-[0.1em] text-[17.8vw]" aria-hidden="true">
-		<p class="display text-center leading-[0.9] tracking-[-0.07em] whitespace-nowrap text-ink">{#each WORD as c}<span class="inline-block">{c}</span>{/each}</p>
-		<p class="display absolute inset-x-0 top-[0.04em] text-center leading-[0.9] tracking-[-0.07em] whitespace-nowrap">{#each WORD as c, i}<span class="wave inline-block" style:animation-delay="{i * 0.16}s">{c}</span>{/each}</p>
+	<div bind:this={wordEl} class="wordmark relative select-none pt-[0.04em] pb-[0.1em] text-[17.8vw]" aria-hidden="true" onpointermove={onMove} onpointerleave={onLeave}>
+		<p data-ink class="display text-center leading-[0.9] tracking-[-0.07em] whitespace-nowrap text-ink">{#each WORD as c}<span class="inline-block">{c}</span>{/each}</p>
+		<p class="wave-layer display pointer-events-none absolute inset-x-0 top-[0.04em] text-center leading-[0.9] tracking-[-0.07em] whitespace-nowrap" class:off={following}>{#each WORD as c, i}<span class="wave inline-block" style:animation-delay="{i * 0.16}s">{c}</span>{/each}</p>
+		<p class="display pointer-events-none absolute inset-x-0 top-[0.04em] text-center leading-[0.9] tracking-[-0.07em] whitespace-nowrap">{#each WORD as c, i}<span class="follow inline-block" style:opacity={heat[i] * 0.95}>{c}</span>{/each}</p>
 	</div>
 
 	<div class="relative border-t border-line bg-paper">
@@ -113,6 +145,10 @@
 		16% { opacity: 0.95; }
 		26% { opacity: 0.95; }
 	}
+	/* Capa de ola automática: se desvanece mientras el puntero guía el rojo */
+	.wave-layer { transition: opacity 0.4s ease; }
+	.wave-layer.off { opacity: 0; }
+	.follow { color: var(--color-red); opacity: 0; transition: opacity 0.28s ease-out; will-change: opacity; }
 	@media (prefers-reduced-motion: reduce) {
 		.wave { animation: none; opacity: 0; }
 	}

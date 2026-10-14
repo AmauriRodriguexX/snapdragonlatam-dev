@@ -3,6 +3,7 @@
 	import { countries, interests } from '#lib/data/content';
 	import { country } from '#lib/state/country.svelte';
 	import { reveal } from '#lib/actions/motion';
+	import SnapMark from './SnapMark.svelte';
 
 	let { index = '07' }: { index?: string } = $props();
 
@@ -71,9 +72,8 @@
 	<div class="lg:col-span-6 lg:col-start-7" use:reveal={{ delay: 120 }}>
 		{#if isSuccess}
 			<div class="flex min-h-[26rem] flex-col justify-center rounded-md bg-paper-2 p-10" role="status">
-				<span class="grid h-12 w-12 place-items-center rounded-full bg-ink text-paper">
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" /></svg>
-				</span>
+				<!-- Confirmación: variante success de la marca, en bucle (pop + barrido de luz cada 2.8 s) -->
+				<SnapMark size={96} state="success" loop />
 				<h3 class="mt-8 text-3xl tracking-[-0.03em]">Listo, {name.split(' ')[0]}.</h3>
 				<p class="mt-3 max-w-sm text-ink-2">Ya eres parte de Snapdragon Insiders. Revisa tu correo para confirmar la suscripción.</p>
 				<button type="button" onclick={() => { isSuccess = false; name = ''; email = ''; acceptTerms = false; }} class="link mt-8 self-start text-sm">Registrar a otra persona</button>

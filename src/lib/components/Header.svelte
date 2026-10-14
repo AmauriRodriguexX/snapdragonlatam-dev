@@ -6,6 +6,7 @@
 	import { country } from '#lib/state/country.svelte';
 	import { modal } from '#lib/state/modal.svelte';
 	import { smooth } from '#lib/state/scroll';
+	import SnapMark from './SnapMark.svelte';
 
 	const counts: Record<string, number> = {
 		'/laptops': laptops.length,
@@ -17,6 +18,8 @@
 
 	let open = $state(false);
 	let scrolled = $state(false);
+	// Logo animado: flota en reposo; al pasar el cursor (o enfocar) hace el destello de éxito
+	let logoState = $state<'idle' | 'success'>('idle');
 
 	function onScroll() {
 		scrolled = scrollY > 8;
@@ -38,15 +41,26 @@
 	<!-- El nombre de transición debe estar en el vidrio: en un ancestro aislaría su backdrop. -->
 	<div class="glass-effect backdrop-blur-[28px] backdrop-saturate-[1.65] {scrolled || open ? 'glass-effect--scrolled' : ''}" style="view-transition-name: site-header">
 		<div class="container-x flex h-16 items-center justify-between gap-6">
-			<a href={resolve('/')} class="flex items-center gap-2.5" aria-label="Snapdragon Latam, inicio" onclick={() => (open = false)}>
-				<img src={asset('/media/brand/logo-snapdragon-red.svg')} alt="Snapdragon" class="h-[18px] w-auto" width="112" height="22" />
+			<a
+				href={resolve('/')}
+				class="flex items-center gap-2"
+				aria-label="Snapdragon Latam, inicio"
+				onclick={() => (open = false)}
+				onpointerenter={() => (logoState = 'success')}
+				onpointerleave={() => (logoState = 'idle')}
+				onfocus={() => (logoState = 'success')}
+				onblur={() => (logoState = 'idle')}
+			>
+				<!-- Marca animada + palabra "Snapdragon" del logo oficial (sin la marca estática) -->
+				<SnapMark size={34} state={logoState} />
+				<img src={asset('/media/brand/logo-snapdragon-wordmark.svg')} alt="" aria-hidden="true" class="h-[18px] w-auto" width="89" height="22" />
 				<span class="label mt-0.5 text-[0.65rem] text-ink">Latam</span>
 			</a>
 
 			<nav class="hidden items-center gap-7 lg:flex" aria-label="Principal">
 				{#each nav as item}
-					<a href={resolve(item.href)} class="group relative text-[0.9rem] tracking-[-0.01em] transition-colors {isActive(item.href) ? 'text-ink' : 'text-mute hover:text-ink'}" aria-current={isActive(item.href) ? 'page' : undefined}>
-						{item.label}<sup class="ml-0.5 font-mono text-[0.6rem] text-faint">{counts[item.href]}</sup>
+					<a href={resolve(item.href)} class="group relative text-[0.9rem] tracking-[-0.01em] transition-colors {isActive(item.href) ? 'text-ink' : 'text-ink-2 hover:text-ink'}" aria-current={isActive(item.href) ? 'page' : undefined}>
+						{item.label}<sup class="ml-0.5 font-mono text-[0.6rem] text-mute">{counts[item.href]}</sup>
 						<span class="absolute -bottom-1.5 left-0 h-px bg-ink transition-[width] duration-500 ease-[var(--ease-out-expo)] {isActive(item.href) ? 'w-full' : 'w-0 group-hover:w-full'}"></span>
 					</a>
 				{/each}
@@ -111,8 +125,10 @@
 	</div>
 </header>
 <style>
+	/* Opacidad alta a propósito: con 0.58 → 0.38 de blanco, al pasar sobre algo oscuro (die del chip, fotos,
+	   modelo 3D) el vidrio se oscurecía y los links en gris se perdían. Así el texto ink-2 conserva ≥ 7:1 sobre negro. */
 	.glass-effect {
-		background: linear-gradient(120deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.38));
+		background: linear-gradient(120deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.74));
 		/* El blur va en utilidades de Tailwind (backdrop-blur / backdrop-saturate): el minificador de producción
 		   eliminaba aquí `backdrop-filter` y sólo dejaba la versión -webkit-, así que en GitHub Pages no había vidrio. */
 		border-radius: 80px;
@@ -120,6 +136,6 @@
 		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(255, 255, 255, 0.35);
 		transition: background 300ms ease;
 	}
-	.glass-effect--scrolled { background: linear-gradient(120deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.38)); }
+	.glass-effect--scrolled { background: linear-gradient(120deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.74)); }
 	@media (prefers-reduced-motion: reduce) { .glass-effect { transition: none; } }
 </style>
