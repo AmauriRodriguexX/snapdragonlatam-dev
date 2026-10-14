@@ -31,9 +31,12 @@
 	const clean = (w: string) => w.replace(/[.,;:]/g, '');
 </script>
 
-<p bind:this={el} class={klass} aria-label={text}>
-	{#each words as w, i}
-		{@const local = Math.min(1, Math.max(0, progress * words.length * 1.15 - i))}
-		<span aria-hidden="true" class="transition-colors duration-200 {accent.includes(clean(w)) ? 'accent' : ''}" style:opacity={0.14 + local * 0.86}>{w}</span>{' '}
-	{/each}
+<p bind:this={el} class={klass}>
+	<span class="sr-only">{text}</span>
+	<span aria-hidden="true">
+		{#each words as w, i}
+			{@const local = Math.min(1, Math.max(0, progress * words.length * 1.15 - i))}
+			<span class="transition-colors duration-200 {accent.includes(clean(w)) ? 'accent' : ''}" style:opacity={0.14 + local * 0.86}>{w}</span>{' '}
+		{/each}
+	</span>
 </p>
