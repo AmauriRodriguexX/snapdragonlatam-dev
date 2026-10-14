@@ -37,7 +37,7 @@
 	const EDGES = ['back', 'left', 'front', 'right'] as const;
 	const vb = $derived((portrait ? '-300 -20 700 425' : G.viewBox).split(' ').map(Number));
 	const cam = $derived(`translate(50 167.5) scale(${s.z}) translate(${-s.fx} ${-s.fy})`);
-	const energy = $derived(Math.max(0, Math.min(1, 1 - s.ls / 8)));
+	const energy = $derived(lite ? (s.ls > 0.4 ? 0 : 1) : Math.max(0, Math.min(1, 1 - s.ls / 8)));
 	// Ritmo propio por pista (determinista): duración 1.9–3.1 s y fase repartida
 	const beat = (i: number) => {
 		const d = 1.9 + ((i * 7) % 5) * 0.3;
@@ -82,14 +82,17 @@
 
 		{#each EDGES as k}
 			{@const f = G.fade[k]}
-			<linearGradient id="fade-{k}" gradientUnits="userSpaceOnUse" x1={f.x1} y1={f.y1} x2={f.x2} y2={f.y2}>
-				<stop offset="0" stop-color="#fff" />
-				<stop offset="0.3" stop-color="#fff" stop-opacity="0.85" />
-				<stop offset="1" stop-color="#fff" stop-opacity="0" />
+			<!-- Desvanecimiento por borde como degradado del propio trazo (sin <mask>, que obliga a repintar en cada cuadro) -->
+			<linearGradient id="fadeT-{k}" gradientUnits="userSpaceOnUse" x1={f.x1} y1={f.y1} x2={f.x2} y2={f.y2}>
+				<stop offset="0" stop-color="#c9b98f" />
+				<stop offset="0.3" stop-color="#c9b98f" stop-opacity="0.85" />
+				<stop offset="1" stop-color="#c9b98f" stop-opacity="0" />
 			</linearGradient>
-			<mask id="beyond-{k}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" x="-2000" y="-2000" width="4000" height="4000">
-				<rect x="-2000" y="-2000" width="4000" height="4000" fill="url(#fade-{k})" />
-			</mask>
+			<linearGradient id="fadeR-{k}" gradientUnits="userSpaceOnUse" x1={f.x1} y1={f.y1} x2={f.x2} y2={f.y2}>
+				<stop offset="0" stop-color="#e01224" />
+				<stop offset="0.3" stop-color="#e01224" stop-opacity="0.85" />
+				<stop offset="1" stop-color="#e01224" stop-opacity="0" />
+			</linearGradient>
 		{/each}
 	</defs>
 
@@ -97,14 +100,13 @@
 		<!-- Continuación fuera del recorte: la corriente sale del chip hacia el resto de la tarjeta madre -->
 		<g class="beyond" transform={cam} style:opacity={energy}>
 			{#each EDGES as k, e}
-				<g mask="url(#beyond-{k})">
+				<g>
 					{#each G.beyond[k] as r, i}
-						<path d={r.d} class="trace" />
-						<path d={r.end} class="vias ghost-via" />
-						<g style={beat(80 + e * 9 + i)}>
-							<path d={r.d} pathLength="100" class="tail" />
-							<path d={r.d} pathLength="100" class="spark" />
-							<path d={r.end} class="hit" />
+						<path d={r.d} class="trace" style:stroke="url(#fadeT-{k})" />
+						<g style={beat(80 + e * 9 + i)} class:alt={i % 2 === 1}>
+							<path d={r.d} pathLength="100" class="tail hd" style:stroke="url(#fadeR-{k})" />
+							<path d={r.d} pathLength="100" class="spark" style:stroke="url(#fadeR-{k})" />
+							<path d={r.end} class="hit" style:fill="url(#fadeR-{k})" />
 						</g>
 					{/each}
 				</g>
@@ -138,17 +140,17 @@
 		{#if energy > 0.02}
 			<!-- Corriente: un destello rojo con estela recorre cada pista y enciende su terminal al llegar -->
 			<g class="energy" style:opacity={energy}>
-				<path d={G.socFrame} class="soc-glow" />
+				<path d={G.socFrame} class="soc-glow hd" />
 				{#each G.routes as r, i}
-					<g style={beat(i)}>
-						<path d={r.d} pathLength="100" class="tail" class:power={r.power} />
+					<g style={beat(i)} class:alt={i % 2 === 1 && !r.power}>
+						<path d={r.d} pathLength="100" class="tail hd" class:power={r.power} />
 						<path d={r.d} pathLength="100" class="spark" class:power={r.power} />
 						{#if r.end}<path d={r.end} class="hit" />{/if}
 					</g>
 				{/each}
 				{#if !lite}
 					{#each G.traces as t, i}
-						<g style={beat(i + 40)}><path d={t} pathLength="100" class="spark thin" /></g>
+						<g style={beat(i + 40)}><path d={t} pathLength="100" class="spark thin hd" /></g>
 					{/each}
 				{/if}
 			</g>
@@ -199,7 +201,7 @@
 	<g class="lift" style:transform={lift(s.ld, 5)}>
 		<g class="solid die"><path d={G.die.py} class="f-y" /><path d={G.die.px} class="f-x" /><path d={G.die.top} class="f-t" /><path d={G.die.top} fill="url(#dieSheen)" /></g>
 		<path d={G.dieGrid} class="die-grid" />
-		{#if energy > 0.02}<path d={G.dieGrid} class="die-charge" style:opacity={energy} />{/if}
+		{#if energy > 0.02}<path d={G.dieGrid} class="die-charge hd" style:opacity={energy} />{/if}
 		{#each G.blocks as b}
 			<path d={b.slab.top} class="shadow dark" filter={soft} style:opacity={Math.min(0.5, (s.lb + extraOf(b.group) - s.ld) / 60)} />
 		{/each}
@@ -223,7 +225,12 @@
 <style>
 	.chip { overflow: hidden; }
 	.beyond .trace { opacity: 0.9; }
-	.ghost-via { opacity: 0.8; }
+		/* Táctil / pantalla chica: menos capas animadas y sin desenfoques ya desde el primer pintado */
+	@media (pointer: coarse), (max-width: 900px) {
+		.hd, .alt { display: none; }
+		.halo, .shadow { filter: none; }
+		.halo { opacity: 0.045; }
+	}
 	@media (max-width: 639px) and (prefers-reduced-motion: no-preference) {
 		.chip { transform-origin: center; animation: chip-float 5.8s ease-in-out infinite; will-change: transform; }
 	}
